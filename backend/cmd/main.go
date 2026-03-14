@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func resolveFrontendBuildDir() string {
@@ -42,6 +43,11 @@ func main() {
 		},
 	)
 	app.Use(compress.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "https://chess-base.vercel.app,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000",
+		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+	}))
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		database := "disconnected"
