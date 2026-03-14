@@ -4,6 +4,7 @@ import (
 	"chess/config"
 	"chess/routes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -32,7 +33,7 @@ func resolveFrontendBuildDir() string {
 }
 
 func main() {
-	config.ConnectDB()
+	go config.ConnectDB()
 	app := fiber.New(
 		fiber.Config{
 			Prefork:     false,
@@ -42,9 +43,29 @@ func main() {
 	)
 	app.Use(compress.New())
 
+	app.Get("/health", func(c *fiber.Ctx) error {
+		database := "disconnected"
+		if config.DB != nil {
+			database = "connected"
+		}
+		return c.JSON(fiber.Map{
+			"status":   "ok",
+			"database": database,
+		})
+	})
+
 	routes.GameRoutes(app)
 
 	frontendBuildDir := resolveFrontendBuildDir()
+	app.Get("/", func(c *fiber.Ctx) error {
+		if frontendBuildDir != "" {
+			return c.SendFile(filepath.Join(frontendBuildDir, "index.html"))
+		}
+		return c.JSON(fiber.Map{
+			"message": "chess backend running",
+		})
+	})
+
 	if frontendBuildDir == "" {
 		log.Println("frontend build not found, serving API only")
 	} else {
@@ -62,5 +83,11 @@ func main() {
 		})
 	}
 
-	log.Fatal(app.Listen(":3000"))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	log.Printf("listening on :%s", port)
+	log.Fatal(app.Listen(fmt.Sprintf(":%s", port)))
 }

@@ -23,6 +23,13 @@ const (
 	statusFinished = "finished"
 )
 
+func gamesCollection() (*mongo.Collection, error) {
+	if config.DB == nil {
+		return nil, errors.New("database unavailable")
+	}
+	return config.DB.Collection("games"), nil
+}
+
 func CreateGame() (*models.Game, error) {
 	ctx := context.TODO()
 	loc, _ := time.LoadLocation("Asia/Kolkata")
@@ -33,7 +40,10 @@ func CreateGame() (*models.Game, error) {
 		Status:    statusWaiting,
 		CreatedAt: time.Now().In(loc).Unix(),
 	}
-	collection := config.DB.Collection("games")
+	collection, err := gamesCollection()
+	if err != nil {
+		return nil, err
+	}
 	insertResult, err := collection.InsertOne(ctx, game)
 	if err != nil {
 		return nil, err
@@ -45,11 +55,14 @@ func CreateGame() (*models.Game, error) {
 }
 
 func JoinGame(gameID string, playerID string) (*models.Game, string, error) {
-	collection := config.DB.Collection("games")
+	collection, err := gamesCollection()
+	if err != nil {
+		return nil, "", err
+	}
 	filter := bson.M{"gameId": gameID}
 
 	var game models.Game
-	err := collection.FindOne(context.TODO(), filter).Decode(&game)
+	err = collection.FindOne(context.TODO(), filter).Decode(&game)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, "", errors.New("game not found")
@@ -83,9 +96,12 @@ func JoinGame(gameID string, playerID string) (*models.Game, string, error) {
 }
 
 func GetGame(gameID string) (*models.Game, error) {
-	collection := config.DB.Collection("games")
+	collection, err := gamesCollection()
+	if err != nil {
+		return nil, err
+	}
 	var game models.Game
-	err := collection.FindOne(context.TODO(), bson.M{"gameId": gameID}).Decode(&game)
+	err = collection.FindOne(context.TODO(), bson.M{"gameId": gameID}).Decode(&game)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("game not found")
@@ -96,8 +112,11 @@ func GetGame(gameID string) (*models.Game, error) {
 }
 
 func deleteGameByID(gameID string) error {
-	collection := config.DB.Collection("games")
-	_, err := collection.DeleteOne(context.TODO(), bson.M{"gameId": gameID})
+	collection, err := gamesCollection()
+	if err != nil {
+		return err
+	}
+	_, err = collection.DeleteOne(context.TODO(), bson.M{"gameId": gameID})
 	return err
 }
 
@@ -165,9 +184,12 @@ func applyMove(game *models.Game, playerID, moveStr string) error {
 }
 
 func MakeMove(gameID, playerID, moveStr string) (*models.Game, error) {
-	collection := config.DB.Collection("games")
+	collection, err := gamesCollection()
+	if err != nil {
+		return nil, err
+	}
 	var game models.Game
-	err := collection.FindOne(context.TODO(), bson.M{"gameId": gameID}).Decode(&game)
+	err = collection.FindOne(context.TODO(), bson.M{"gameId": gameID}).Decode(&game)
 
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -209,9 +231,12 @@ func MakeMove(gameID, playerID, moveStr string) (*models.Game, error) {
 }
 
 func ResignGame(gameID, playerID string) (*models.Game, error) {
-	collection := config.DB.Collection("games")
+	collection, err := gamesCollection()
+	if err != nil {
+		return nil, err
+	}
 	var game models.Game
-	err := collection.FindOne(context.TODO(), bson.M{"gameId": gameID}).Decode(&game)
+	err = collection.FindOne(context.TODO(), bson.M{"gameId": gameID}).Decode(&game)
 	if err != nil {
 		return nil, err
 	}
