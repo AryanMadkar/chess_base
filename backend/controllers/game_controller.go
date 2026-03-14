@@ -3,6 +3,7 @@ package controllers
 import (
 	"chess/services"
 	"encoding/json"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,8 +22,13 @@ func broadcastGameUpdate(gameID string, game any) {
 func CreateGame(c *fiber.Ctx) error {
 	game, err := services.CreateGame()
 	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "database unavailable") {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "database unavailable",
+			})
+		}
 		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to create game",
+			"error": err.Error(),
 		})
 	}
 	return c.JSON(game)

@@ -243,12 +243,15 @@ func ResignGame(gameID, playerID string) (*models.Game, error) {
 	if game.Status == statusFinished {
 		return nil, errors.New("game already finished")
 	}
+	if playerID != game.Player1 && playerID != game.Player2 {
+		return nil, errors.New("player not in this game")
+	}
 	game.Status = statusFinished
 	game.Reason = "resign"
 	if game.Player1 == playerID {
-		game.Winner = game.Player2
+		game.Winner = turnBlack
 	} else {
-		game.Winner = game.Player1
+		game.Winner = turnWhite
 	}
 	_, err = collection.UpdateOne(
 		context.TODO(),
